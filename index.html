@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tra cứu ảnh in – Fluvo (nội bộ)</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Tra cứu ảnh">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #072849;
+    --brand: #26B6F6;
+    --paper: #EEF2F6;
+    --surface: #FFFFFF;
+    --ink: #0F2236;
+    --muted: #586678;
+    --line: #D2DAE3;
+    --cyan: #0A73B5;
+    --cyan-soft: #E3F4FD;
+    --btn: #072849;
+    --btn-ink: #FFFFFF;
+    --magenta: #C2007A;
+    --magenta-soft: #FAE5F1;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #0A1420;
+      --surface: #102031;
+      --ink: #E4ECF4;
+      --muted: #94A5B8;
+      --line: #22364B;
+      --cyan: #26B6F6;
+      --cyan-soft: #0E2C40;
+      --btn: #26B6F6;
+      --btn-ink: #072849;
+      --magenta: #F25CB2;
+      --magenta-soft: #3A1830;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 400 15px/1.5 "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  body { display: flex; flex-direction: column; min-height: 100vh; }
+  .wrap { flex: 1; width: 100%; max-width: 1120px; margin: 0 auto; padding: 28px 20px 64px; }
+
+  h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.015em; margin: 0 0 18px; }
+
+  .search { display: flex; gap: 8px; flex-wrap: wrap; }
+  .search input {
+    flex: 1 1 280px; min-width: 0;
+    font-family: inherit; font-size: 19px; font-weight: 500;
+    padding: 14px 16px;
+    border: 2px solid var(--ink); border-radius: 6px;
+    background: var(--surface); color: var(--ink);
+  }
+  .search input:focus-visible { outline: 3px solid var(--cyan); outline-offset: 1px; }
+  .btn-primary {
+    font-family: inherit; font-size: 16px; font-weight: 600;
+    padding: 0 26px; min-height: 52px;
+    border: 0; border-radius: 6px;
+    background: var(--btn); color: var(--btn-ink); cursor: pointer;
+  }
+  .btn-primary:disabled { opacity: .55; cursor: progress; }
+  .btn-scan {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: inherit; font-size: 16px; font-weight: 600;
+    padding: 0 18px; min-height: 52px; border-radius: 6px; cursor: pointer;
+    background: var(--surface); color: var(--ink); border: 2px solid var(--ink);
+  }
+  .btn-scan svg { width: 22px; height: 22px; flex: none; }
+  .btn-scan:disabled { opacity: .55; cursor: progress; }
+  .btn-scan:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+  .btn-primary:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+
+  .modes { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; border: 0; padding: 0; }
+  .modes label { position: relative; }
+  .modes input { position: absolute; opacity: 0; pointer-events: none; }
+  .modes span {
+    display: inline-block; padding: 6px 14px;
+    border: 1px solid var(--line); border-radius: 999px;
+    font-size: 14px; cursor: pointer; background: var(--surface);
+  }
+  .modes input:checked + span { background: var(--btn); border-color: var(--btn); color: var(--btn-ink); }
+  .modes input:focus-visible + span { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  .hint { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
+
+  .status { margin: 28px 0 14px; color: var(--muted); }
+  .status.error { color: var(--magenta); font-weight: 500; }
+
+  .order {
+    background: var(--surface);
+    border: 1px solid var(--line); border-left: 5px solid var(--cyan);
+    border-radius: 4px; padding: 18px 20px 20px; margin-bottom: 18px;
+  }
+  .order.dup { border-left-color: var(--magenta); }
+  .order-head { display: flex; align-items: baseline; gap: 10px 14px; flex-wrap: wrap; }
+  .order-id { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .01em; }
+  .flag {
+    font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
+    background: var(--magenta-soft); color: var(--magenta);
+  }
+  .links { margin-top: 8px; font-size: 14px; color: var(--muted); }
+  .links p { margin: 2px 0; }
+  .linkbtn {
+    background: none; border: 0; padding: 0; cursor: pointer;
+    font: inherit; color: var(--cyan); text-decoration: underline; text-underline-offset: 2px;
+  }
+  .linkbtn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+  .sub { border-top: 1px dashed var(--line); margin-top: 16px; padding-top: 16px; }
+  .sub-title { font-size: 13px; color: var(--muted); margin: 0 0 8px; }
+  .sub.matched .sub-title { color: var(--cyan); font-weight: 600; }
+  .meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 18px; margin: 0; }
+  .meta dt { color: var(--muted); font-size: 12px; }
+  .meta dd { margin: 0; font-weight: 500; word-break: break-word; }
+  .meta dd.bad { color: var(--magenta); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 18px; margin-top: 16px; }
+
+  /* Khung ảnh có dấu cắt kiểu bản bông in thử */
+  .frame {
+    --m: var(--muted);
+    padding: 9px;
+    background:
+      linear-gradient(var(--m), var(--m)) left top / 12px 1.5px no-repeat,
+      linear-gradient(var(--m), var(--m)) left top / 1.5px 12px no-repeat,
+      linear-gradient(var(--m), var(--m)) right top / 12px 1.5px no-repeat,
+      linear-gradient(var(--m), var(--m)) right top / 1.5px 12px no-repeat,
+      linear-gradient(var(--m), var(--m)) left bottom / 12px 1.5px no-repeat,
+      linear-gradient(var(--m), var(--m)) left bottom / 1.5px 12px no-repeat,
+      linear-gradient(var(--m), var(--m)) right bottom / 12px 1.5px no-repeat,
+      linear-gradient(var(--m), var(--m)) right bottom / 1.5px 12px no-repeat;
+  }
+  .frame.hl { --m: var(--cyan); background-color: var(--cyan-soft); }
+  .thumb {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; aspect-ratio: 1; padding: 0; border: 0;
+    background: var(--paper); overflow: hidden; cursor: zoom-in;
+  }
+  .thumb:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+  .thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .thumb .ph { color: var(--muted); font-size: 13px; padding: 10px; text-align: center; }
+  .code { font-size: 21px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: .02em; margin-top: 8px; }
+  .frame.hl .code { color: var(--cyan); }
+  .code small { font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+
+  .more { color: var(--muted); font-size: 14px; }
+
+  /* Xem ảnh lớn */
+  dialog {
+    width: 100vw; height: 100vh; max-width: 100vw; max-height: 100vh;
+    margin: 0; padding: 0; border: 0;
+    background: rgba(10, 13, 18, .94); color: #fff;
+  }
+  dialog::backdrop { background: rgba(10, 13, 18, .94); }
+  .lb { display: grid; grid-template-rows: auto 1fr auto; height: 100%; }
+  .lb-top, .lb-bottom { display: flex; align-items: center; gap: 12px; padding: 12px 16px; flex-wrap: wrap; }
+  .lb-code { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .lb-info { color: #B7C0CC; font-size: 14px; }
+  .lb-top .spacer { flex: 1; }
+  .lb-stage { position: relative; display: flex; align-items: center; justify-content: center; min-height: 0; padding: 0 56px; }
+  .lb-stage img { max-width: 100%; max-height: 100%; object-fit: contain; }
+  .lb-msg { color: #B7C0CC; }
+  .lb-btn {
+    background: rgba(255,255,255,.1); color: #fff; border: 1px solid rgba(255,255,255,.25);
+    border-radius: 6px; padding: 8px 14px; font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
+    text-decoration: none;
+  }
+  .lb-btn:hover { background: rgba(255,255,255,.18); }
+  .lb-btn:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  .lb-nav { position: absolute; top: 50%; transform: translateY(-50%); font-size: 22px; padding: 10px 14px; }
+  .lb-prev { left: 8px; } .lb-next { right: 8px; }
+  .lb-count { color: #B7C0CC; font-size: 14px; margin-left: auto; }
+
+
+  [hidden] { display: none !important; }
+
+  /* Thanh thương hiệu */
+  .brandbar { background: var(--surface); border-bottom: 3px solid var(--brand); }
+  .brandbar-in {
+    max-width: 1120px; margin: 0 auto; padding: 14px 20px;
+    display: flex; align-items: center; gap: 18px;
+  }
+  .brand { display: flex; align-items: center; flex: none; }
+  .brand img { height: 40px; width: auto; display: block; }
+  .wordmark { font-size: 24px; font-weight: 800; letter-spacing: .14em; color: var(--navy); }
+  .brand-title { display: flex; flex-direction: column; padding-left: 18px; border-left: 1px solid var(--line); min-width: 0; }
+  .brand-title h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+  .brand-title span { font-size: 13px; color: var(--muted); }
+  .internal {
+    margin-left: auto; flex: none;
+    font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 4px;
+    background: var(--navy); color: #fff;
+  }
+  @media (prefers-color-scheme: dark) {
+    .brand { background: #fff; padding: 6px 10px; border-radius: 6px; }
+    .internal { background: var(--brand); color: var(--navy); }
+  }
+
+  .foot { border-top: 1px solid var(--line); background: var(--surface); }
+  .foot-in {
+    max-width: 1120px; margin: 0 auto; padding: 18px 20px 24px;
+    display: flex; justify-content: space-between; gap: 8px 24px; flex-wrap: wrap;
+    font-size: 13px; color: var(--muted);
+  }
+  .foot-in p { margin: 0; max-width: 70ch; }
+  .foot-in strong { color: var(--ink); font-weight: 600; }
+  .thumb img:not([src]) { visibility: hidden; }
+  .thumb.loading { background:
+    repeating-linear-gradient(135deg, transparent 0 10px, var(--line) 10px 11px), var(--paper); }
+
+  @media (max-width: 600px) {
+    .brandbar-in { flex-wrap: wrap; gap: 10px 14px; }
+    .brand img { height: 32px; }
+    .brand-title { padding-left: 14px; }
+    .brand-title span { display: none; }
+    .meta { grid-template-columns: repeat(2, 1fr); }
+    .btn-primary, .btn-scan { flex: 1 1 calc(50% - 4px); justify-content: center; }
+    .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .lb-stage { padding: 0 8px; }
+    .lb-nav { top: auto; bottom: 8px; transform: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+  /* ===== Bổ sung cho app cài trên điện thoại ===== */
+  html { -webkit-text-size-adjust: 100%; }
+  body { -webkit-tap-highlight-color: transparent; }
+  .brandbar { padding-top: env(safe-area-inset-top); position: sticky; top: 0; z-index: 5; }
+  .foot { padding-bottom: env(safe-area-inset-bottom); }
+  body.noscroll { overflow: hidden; }
+
+  /* Gợi ý cài app */
+  .install {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--cyan-soft); border: 1px solid var(--line); border-radius: 6px;
+    padding: 12px 14px; margin-bottom: 18px; font-size: 14px;
+  }
+  .install p { margin: 0; flex: 1 1 220px; }
+  .install .btn-sm {
+    font-family: inherit; font-size: 14px; font-weight: 600; padding: 8px 14px;
+    border-radius: 6px; border: 0; cursor: pointer; background: var(--btn); color: var(--btn-ink);
+  }
+  .install .linkbtn { font-size: 14px; }
+
+  /* Màn quét mã trực tiếp */
+  .scanner {
+    position: fixed; inset: 0; z-index: 50; background: #000; color: #fff;
+    display: grid; grid-template-rows: auto 1fr auto;
+  }
+  .scanner-top, .scanner-bottom {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 12px 16px; background: rgba(0,0,0,.6);
+  }
+  .scanner-top { padding-top: calc(12px + env(safe-area-inset-top)); }
+  .scanner-bottom { padding-bottom: calc(14px + env(safe-area-inset-bottom)); justify-content: center; }
+  .scanner-title { font-weight: 600; flex: 1; }
+  .scanner-stage { position: relative; overflow: hidden; min-height: 0; }
+  .scanner-stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .scan-guide {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: min(84%, 520px); aspect-ratio: 16 / 10;
+    border-radius: 10px; box-shadow: 0 0 0 100vmax rgba(0,0,0,.45);
+    background:
+      linear-gradient(var(--brand), var(--brand)) left top / 34px 4px no-repeat,
+      linear-gradient(var(--brand), var(--brand)) left top / 4px 34px no-repeat,
+      linear-gradient(var(--brand), var(--brand)) right top / 34px 4px no-repeat,
+      linear-gradient(var(--brand), var(--brand)) right top / 4px 34px no-repeat,
+      linear-gradient(var(--brand), var(--brand)) left bottom / 34px 4px no-repeat,
+      linear-gradient(var(--brand), var(--brand)) left bottom / 4px 34px no-repeat,
+      linear-gradient(var(--brand), var(--brand)) right bottom / 34px 4px no-repeat,
+      linear-gradient(var(--brand), var(--brand)) right bottom / 4px 34px no-repeat;
+  }
+  .scan-line {
+    position: absolute; left: 6%; right: 6%; top: 50%; height: 2px;
+    background: var(--brand); opacity: .85; animation: sweep 1.8s ease-in-out infinite alternate;
+  }
+  @keyframes sweep { from { top: 14%; } to { top: 86%; } }
+  @media (prefers-reduced-motion: reduce) { .scan-line { animation: none; } }
+  .scan-msg {
+    position: absolute; left: 0; right: 0; bottom: 18px; text-align: center;
+    font-size: 15px; padding: 0 16px; text-shadow: 0 1px 3px rgba(0,0,0,.8);
+  }
+  .scanner .lb-btn[aria-pressed="true"] { background: var(--brand); color: var(--navy); border-color: var(--brand); }
+</style>
+<script src="config.js"></script>
+</head>
+<body>
+<!-- App -->
+<header class="brandbar">
+  <div class="brandbar-in">
+    <div class="brand">
+      <img src="logo.png" alt="Fluvo" width="129" height="40">
+    </div>
+    <div class="brand-title">
+      <h1>Tra cứu ảnh in</h1>
+      <span>Công cụ nội bộ cho bộ phận xử lý đơn</span>
+    </div>
+    <span class="internal">Nội bộ</span>
+  </div>
+</header>
+
+<main id="app" class="wrap">
+  <div id="install" class="install" hidden>
+    <p id="installText"></p>
+    <button id="installBtn" class="btn-sm" type="button" hidden>Cài app</button>
+    <button id="installHide" class="linkbtn" type="button">Ẩn</button>
+  </div>
+
+  <form id="f" onsubmit="return false">
+    <div class="search">
+      <input id="q" type="search" autocomplete="off"
+             placeholder="ID đơn, SĐT hoặc ID ảnh" aria-label="Nội dung tra cứu">
+      <button id="scan" class="btn-scan" type="button" aria-label="Quét mã bằng camera">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+          <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/>
+          <path d="M7 8v8M10 8v8M13 8v8M16 8v8"/>
+        </svg>
+        Quét mã
+      </button>
+      <button id="go" class="btn-primary" type="submit">Tra cứu</button>
+      <input id="scanFile" type="file" accept="image/*" capture="environment" hidden>
+    </div>
+    <fieldset class="modes" aria-label="Loại tra cứu">
+      <label><input type="radio" name="mode" value="auto" checked><span>Tự nhận diện</span></label>
+      <label><input type="radio" name="mode" value="order"><span>ID đơn</span></label>
+      <label><input type="radio" name="mode" value="phone"><span>Số điện thoại</span></label>
+      <label><input type="radio" name="mode" value="image"><span>ID ảnh</span></label>
+    </fieldset>
+    <p class="hint">Nhập ít nhất 4 số cuối của ID đơn hoặc số điện thoại, hoặc ID ảnh dạng A001. Bấm Quét mã để đưa camera vào mã vạch hoặc QR trên phiếu đơn.</p>
+  </form>
+
+  <div id="status" class="status" role="status" aria-live="polite"></div>
+  <div id="results"></div>
+</main>
+
+<footer class="foot">
+  <div class="foot-in">
+    <p><strong>Tài liệu nội bộ Fluvo.</strong> Chỉ dùng cho nhân viên. Không chia sẻ đường link, ảnh hoặc thông tin khách hàng ra ngoài.</p>
+    <p>© <span id="year">2026</span> Fluvo. Phiên bản 1.0</p>
+  </div>
+</footer>
+
+<dialog id="lb" aria-label="Xem ảnh">
+  <div class="lb">
+    <div class="lb-top">
+      <span class="lb-code" id="lbCode"></span>
+      <span class="lb-info" id="lbInfo"></span>
+      <span class="spacer"></span>
+      <button class="lb-btn" id="lbSave" type="button" hidden>Lưu ảnh</button>
+      <button class="lb-btn" id="lbClose" type="button">Đóng</button>
+    </div>
+    <div class="lb-stage">
+      <button class="lb-btn lb-nav lb-prev" id="lbPrev" type="button" aria-label="Ảnh trước">‹</button>
+      <img id="lbImg" alt="" hidden>
+      <span class="lb-msg" id="lbMsg"></span>
+      <button class="lb-btn lb-nav lb-next" id="lbNext" type="button" aria-label="Ảnh sau">›</button>
+    </div>
+    <div class="lb-bottom"><span class="lb-count" id="lbCount"></span></div>
+  </div>
+</dialog>
+
+
+<!-- Màn quét mã trực tiếp -->
+<div id="scanner" class="scanner" hidden role="dialog" aria-modal="true" aria-label="Quét mã">
+  <div class="scanner-top">
+    <span class="scanner-title">Quét mã đơn</span>
+    <button class="lb-btn" id="torch" type="button" aria-pressed="false" hidden>Đèn</button>
+    <button class="lb-btn" id="scanClose" type="button">Đóng</button>
+  </div>
+  <div class="scanner-stage">
+    <video id="scanVideo" playsinline muted autoplay></video>
+    <div class="scan-guide"><div class="scan-line"></div></div>
+    <div class="scan-msg" id="scanMsg"></div>
+  </div>
+  <div class="scanner-bottom">
+    <button class="lb-btn" id="scanPhoto" type="button">Chụp ảnh thay thế</button>
+  </div>
+</div>
+<script>
+  const $ = id => document.getElementById(id);
+  const state = { images: [], idx: 0 };
+  const MODE_NAME = { any: "ID đơn hoặc SĐT", order: "ID đơn", phone: "số điện thoại", image: "ID ảnh" };
+  const thumbCache = new Map();
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, c =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  /* ---------- Gọi API Apps Script ---------- */
+  const API_URL = window.FLUVO_API_URL || "";
+  async function api(params) {
+    if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(API_URL)) {
+      throw new Error("Chưa cấu hình link Apps Script trong config.js.");
+    }
+    let res;
+    try {
+      res = await fetch(API_URL + "?" + new URLSearchParams(params), { cache: "no-store", redirect: "follow" });
+    } catch (e) {
+      throw new Error(navigator.onLine === false ? "Điện thoại đang mất mạng." : "Không kết nối được máy chủ. Thử lại sau giây lát.");
+    }
+    let body;
+    try { body = await res.json(); }
+    catch (e) { throw new Error("Máy chủ trả dữ liệu không hợp lệ. Kiểm tra deployment Apps Script đang để quyền Anyone."); }
+    if (!body.ok) throw new Error(body.error || "Lỗi không xác định.");
+    return body.data;
+  }
+
+  /* ---------- Tra cứu ---------- */
+  function search(q, mode) {
+    q = (q || "").trim();
+    if (!q) { setStatus("Nhập ID đơn, số điện thoại hoặc ID ảnh để tra cứu.", true); $("q").focus(); return; }
+    $("q").value = q;
+    if (mode) document.querySelector('input[name="mode"][value="' + mode + '"]').checked = true;
+    const m = document.querySelector('input[name="mode"]:checked').value;
+
+    $("go").disabled = true; $("go").textContent = "Đang tìm…";
+    setStatus("Đang tra cứu “" + q + "”…");
+    $("results").innerHTML = "";
+    fbQueue.length = 0;
+
+    api({ action: "search", q: q, mode: m })
+      .then(render)
+      .catch(err => { setStatus("Lỗi khi tra cứu: " + err.message, true); })
+      .finally(() => { $("go").disabled = false; $("go").textContent = "Tra cứu"; });
+  }
+  function setStatus(msg, isErr) { const s = $("status"); s.textContent = msg; s.classList.toggle("error", !!isErr); }
+
+  $("f").addEventListener("submit", () => search($("q").value));
+
+  /* ---------- Quét mã vạch / QR từ ảnh chụp ---------- */
+  const ZXING_URL = "vendor/zxing.min.js";
+  let zxingPromise = null;
+
+  $("scan").addEventListener("click", openScanner);
+  $("scanFile").addEventListener("change", async e => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = ""; // cho phép chụp lại
+    if (!file) return;
+    $("scan").disabled = true;
+    setStatus("Đang đọc mã…");
+    try {
+      const raw = await decodeFile(file);
+      const q = pickQuery(raw);
+      if (!q) {
+        $("q").value = raw;
+        setStatus("Mã quét được “" + raw + "” không phải ID đơn, SĐT hay ID ảnh.", true);
+        return;
+      }
+      search(q, "auto");
+    } catch (err) {
+      setStatus(err.message === "NOT_FOUND"
+        ? "Không đọc được mã. Chụp gần hơn, đủ sáng, mã rõ nét và nằm trọn trong khung hình."
+        : "Không đọc được mã: " + err.message, true);
+    } finally {
+      $("scan").disabled = false;
+    }
+  });
+
+  // Lấy phần dùng để tra cứu từ nội dung mã
+  function pickQuery(raw) {
+    const t = String(raw || "").trim();
+    if (/^[A-Za-z]\d{3}$/.test(t)) return t.toUpperCase();          // ID ảnh
+    const nums = t.match(/\d+/g) || [];
+    const order = nums.find(n => n.length === 9);                     // ID đơn 9 số
+    if (order) return order;
+    const longest = nums.sort((a, b) => b.length - a.length)[0];
+    return longest && longest.length >= 4 ? longest : "";
+  }
+
+  async function decodeFile(file) {
+    const src = await loadImage(file);
+
+    // Trình duyệt hỗ trợ sẵn (Chrome Android) thì dùng luôn cho nhanh
+    if ("BarcodeDetector" in window) {
+      try {
+        const found = await new BarcodeDetector().detect(src);
+        if (found.length) return found[0].rawValue;
+      } catch (e) {}
+    }
+
+    // Còn lại (iPhone, máy tính) dùng thư viện ZXing
+    const Z = await loadZXing();
+    const reader = new Z.MultiFormatReader();
+    const hints = new Map();
+    hints.set(Z.DecodeHintType.TRY_HARDER, true);
+    reader.setHints(hints);
+
+    // Thử vài cỡ ảnh và cả chiều xoay ngang/dọc
+    for (const [maxSide, rotate] of [[1600, false], [1600, true], [1000, false], [1000, true], [2400, false]]) {
+      const canvas = toCanvas(src, maxSide, rotate);
+      try {
+        const lum = new Z.HTMLCanvasElementLuminanceSource(canvas);
+        return reader.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(lum))).getText();
+      } catch (e) { reader.reset(); }
+    }
+    throw new Error("NOT_FOUND");
+  }
+
+  function loadImage(file) {
+    if (window.createImageBitmap) {
+      return createImageBitmap(file, { imageOrientation: "from-image" }).catch(() => loadImgEl(file));
+    }
+    return loadImgEl(file);
+  }
+  function loadImgEl(file) {
+    return new Promise((ok, fail) => {
+      const img = new Image();
+      img.onload = () => ok(img);
+      img.onerror = () => fail(new Error("không mở được ảnh"));
+      img.src = URL.createObjectURL(file);
+    });
+  }
+  function toCanvas(src, maxSide, rotate) {
+    const w = src.width, h = src.height;
+    const k = Math.min(1, maxSide / Math.max(w, h));
+    const cw = Math.round(w * k), ch = Math.round(h * k);
+    const c = document.createElement("canvas");
+    c.width = rotate ? ch : cw;
+    c.height = rotate ? cw : ch;
+    const g = c.getContext("2d");
+    if (rotate) { g.translate(ch, 0); g.rotate(Math.PI / 2); }
+    g.drawImage(src, 0, 0, cw, ch);
+    return c;
+  }
+  function loadZXing() {
+    if (window.ZXing) return Promise.resolve(window.ZXing);
+    if (!zxingPromise) {
+      zxingPromise = new Promise((ok, fail) => {
+        const sc = document.createElement("script");
+        sc.src = ZXING_URL;
+        sc.onload = () => window.ZXing ? ok(window.ZXing) : fail(new Error("thư viện đọc mã không tải được"));
+        sc.onerror = () => { zxingPromise = null; fail(new Error("không tải được thư viện đọc mã")); };
+        document.head.appendChild(sc);
+      });
+    }
+    return zxingPromise;
+  }
+
+  /* ---------- Hiển thị ---------- */
+  function render(res) {
+    state.images = [];
+    if (res.error) { setStatus(res.error, true); return; }
+    if (!res.groups.length) {
+      setStatus("Không có kết quả cho " + describe(res) + ". Kiểm tra lại số hoặc chọn đúng loại tra cứu.", true);
+      return;
+    }
+    const t = res.totals;
+    let msg = "Tìm thấy " + t.orders + " đơn, " + t.submissions + " lần gửi, " + t.images + " ảnh theo " + describe(res) + ".";
+    if (res.truncated) msg += " Chỉ hiện " + t.orders + " đơn mới nhất, hãy tra cứu cụ thể hơn.";
+    setStatus(msg);
+    $("results").innerHTML = res.groups.map(g => renderGroup(g, res.highlight)).join("");
+    $("results").querySelectorAll("img[data-fid]").forEach(img => io.observe(img));
+  }
+
+  function describe(res) {
+    return MODE_NAME[res.mode] + (res.mode === "image" ? " “" : " kết thúc bằng “") + res.query + "”";
+  }
+
+  function renderGroup(g, hl) {
+    const dup = g.submitCount > 1 || g.inconsistent;
+    let flags = "";
+    if (g.submitCount > 1) flags += '<span class="flag">Gửi ' + g.submitCount + " lần</span>";
+    if (g.inconsistent) flags += '<span class="flag">Thông tin khác nhau giữa các lần gửi</span>';
+
+    const links = g.phoneLinks.filter(p => p.otherOrders.length).map(p =>
+      "<p>SĐT " + esc(p.phone) + " còn có " + p.otherOrders.length + " đơn khác: " +
+      p.otherOrders.map(o => '<button class="linkbtn" type="button" data-q="' + esc(o) + '" data-mode="order">' + esc(o) + "</button>").join(", ") +
+      ' (<button class="linkbtn" type="button" data-q="' + esc(p.phone) + '" data-mode="phone">xem tất cả theo SĐT</button>)</p>'
+    ).join("");
+
+    return '<section class="order' + (dup ? " dup" : "") + '">' +
+      '<div class="order-head"><span class="order-id">' + esc(g.orderId) + "</span>" + flags + "</div>" +
+      (links ? '<div class="links">' + links + "</div>" : "") +
+      g.submissions.map((s, k) => renderSub(s, k, g, hl)).join("") + "</section>";
+  }
+
+  function renderSub(s, k, g, hl) {
+    const why = s.matched ? "khớp " + s.matchedBy.join(" và ") : "";
+    const title = g.submitCount > 1
+      ? "Lần gửi " + (g.submitCount - k) + "/" + g.submitCount + (why ? ", " + why : "")
+      : (why ? why.charAt(0).toUpperCase() + why.slice(1) : "Lần gửi");
+    const bad = /^lỗi/i.test(s.status);
+    const imgs = s.images.length
+      ? s.images.map(img => renderImg(img, s, g, hl)).join("")
+      : '<p class="more">Lần gửi này không có ảnh.</p>';
+
+    return '<div class="sub' + (s.matched ? " matched" : "") + '">' +
+      '<p class="sub-title">' + esc(title) + "</p>" +
+      '<dl class="meta">' +
+        "<div><dt>Thời gian gửi</dt><dd>" + esc(s.time || "–") + "</dd></div>" +
+        "<div><dt>Tên FB/IG</dt><dd>" + esc(s.fbName || "–") + "</dd></div>" +
+        '<div><dt>Số điện thoại</dt><dd><button class="linkbtn" type="button" data-q="' + esc(s.phone) + '" data-mode="phone">' + esc(s.phone || "–") + "</button></dd></div>" +
+        "<div><dt>Số lượng in</dt><dd>" + esc(s.qty) + "</dd></div>" +
+        "<div><dt>Trạng thái</dt><dd" + (bad ? ' class="bad"' : "") + ">" + esc(s.status || "Chưa xử lý") + "</dd></div>" +
+        "<div><dt>Dòng trên sheet</dt><dd>" + esc(s.row) + "</dd></div>" +
+      "</dl>" +
+      '<div class="grid">' + imgs + "</div></div>";
+  }
+
+  function renderImg(img, s, g, hl) {
+    const fid = img.fileId || img.originalId;
+    const isOriginal = !img.fileId;
+    const i = state.images.length;
+    state.images.push({ fid, code: img.code, isOriginal, info: "Đơn " + g.orderId + ", " + (s.fbName || "") + ", SL in " + s.qty });
+
+    const label = img.code
+      ? esc(img.code) + (isOriginal ? " <small>ảnh gốc, chưa có thành phẩm</small>" : "")
+      : "<small>Ảnh gốc, chưa có mã</small>";
+    const inner = fid
+      ? '<img data-fid="' + esc(fid) + '" alt="Ảnh ' + esc(img.code || "gốc") + '">'
+      : '<span class="ph">Không có file ảnh</span>';
+    return '<div class="frame' + (hl && img.code === hl ? " hl" : "") + '">' +
+      '<button class="thumb' + (fid ? " loading" : "") + '" type="button" data-idx="' + i + '"' + (fid ? "" : " disabled") +
+      ' aria-label="Xem lớn ảnh ' + esc(img.code || "gốc") + '">' + inner + "</button>" +
+      '<div class="code">' + label + "</div></div>";
+  }
+
+  $("results").addEventListener("click", e => {
+    const q = e.target.closest("[data-q]");
+    if (q) { search(q.dataset.q, q.dataset.mode); window.scrollTo(0, 0); return; }
+    const t = e.target.closest(".thumb[data-idx]");
+    if (t && !t.disabled) openLb(Number(t.dataset.idx));
+  });
+
+  /* ---------- Tải ảnh nhỏ khi cuộn tới (tối đa 4 ảnh cùng lúc) ---------- */
+  const fbQueue = []; let fbActive = 0;
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (!en.isIntersecting) return;
+      io.unobserve(en.target);
+      const img = en.target, fid = img.dataset.fid;
+      if (thumbCache.has(fid)) { showThumb(img, thumbCache.get(fid)); return; }
+      fbQueue.push(img); pump();
+    });
+  }, { rootMargin: "300px" });
+
+  function pump() {
+    while (fbActive < 4 && fbQueue.length) {
+      const img = fbQueue.shift();
+      if (!img.isConnected) continue;
+      const fid = img.dataset.fid;
+      fbActive++;
+      api({ action: "image", id: fid, size: "thumb" })
+        .then(r => { thumbCache.set(fid, r.dataUrl); if (img.isConnected) showThumb(img, r.dataUrl); })
+        .catch(err => { if (img.isConnected) broken(img, err.message); })
+        .finally(() => { fbActive--; pump(); });
+    }
+  }
+  function showThumb(img, url) { img.src = url; img.parentElement.classList.remove("loading"); }
+  function broken(img, msg) {
+    const span = document.createElement("span");
+    span.className = "ph"; span.textContent = msg || "Không tải được ảnh";
+    img.parentElement.classList.remove("loading");
+    img.replaceWith(span);
+  }
+
+  /* ---------- Xem ảnh lớn ---------- */
+  function openLb(i) { if (!$("lb").open) $("lb").showModal(); showLb(i); }
+  function showLb(i) {
+    const n = state.images.length;
+    state.idx = (i + n) % n;
+    const it = state.images[state.idx], want = state.idx;
+    const img = $("lbImg");
+    img.hidden = true; img.removeAttribute("src");
+    $("lbMsg").hidden = false; $("lbMsg").textContent = "Đang tải ảnh…";
+    $("lbSave").hidden = true; state.fullUrl = null;
+    $("lbCode").textContent = it.code || "Ảnh gốc";
+    $("lbInfo").textContent = it.info + (it.isOriginal ? ", ảnh gốc khách gửi" : "");
+    $("lbCount").textContent = (state.idx + 1) + " / " + n;
+    $("lbPrev").hidden = $("lbNext").hidden = n < 2;
+
+    api({ action: "image", id: it.fid, size: "full" })
+      .then(r => {
+        if (state.idx !== want || !$("lb").open) return;
+        img.src = r.dataUrl; img.alt = "Ảnh " + (it.code || "gốc"); img.hidden = false;
+        $("lbMsg").hidden = true;
+        state.fullUrl = r.dataUrl;
+        $("lbSave").hidden = false;
+      })
+      .catch(err => {
+        if (state.idx === want) $("lbMsg").textContent = "Không tải được ảnh: " + err.message;
+      });
+  }
+  $("lbPrev").onclick = () => showLb(state.idx - 1);
+  $("lbNext").onclick = () => showLb(state.idx + 1);
+  $("lbClose").onclick = () => $("lb").close();
+  $("lb").addEventListener("keydown", e => {
+    if (e.key === "ArrowLeft") showLb(state.idx - 1);
+    if (e.key === "ArrowRight") showLb(state.idx + 1);
+  });
+  $("lb").addEventListener("click", e => { if (e.target.classList.contains("lb-stage")) $("lb").close(); });
+
+
+  /* ---------- Quét mã trực tiếp bằng camera ---------- */
+  const scanner = { stream: null, timer: null, detector: null, zx: null, rot: false, canvas: null, torch: false };
+
+  async function openScanner() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { $("scanFile").click(); return; }
+    $("scanner").hidden = false;
+    document.body.classList.add("noscroll");
+    $("scanMsg").textContent = "Đang mở camera…";
+    $("torch").hidden = true;
+    try {
+      scanner.stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+    } catch (err) {
+      $("scanMsg").textContent = err.name === "NotAllowedError"
+        ? "Chưa cho phép dùng camera. Vào Cài đặt để cấp quyền, hoặc bấm Chụp ảnh thay thế."
+        : "Không mở được camera. Bấm Chụp ảnh thay thế.";
+      return;
+    }
+    if ($("scanner").hidden) { stopStream(); return; } // đã đóng trong lúc chờ quyền
+    const v = $("scanVideo");
+    v.srcObject = scanner.stream;
+    try { await v.play(); } catch (e) {}
+    setupTorch();
+    $("scanMsg").textContent = "Đang chuẩn bị bộ đọc mã…";
+    try { await prepareDecoder(); }
+    catch (err) { $("scanMsg").textContent = "Không tải được bộ đọc mã: " + err.message; return; }
+    $("scanMsg").textContent = "Đưa mã vạch hoặc QR vào trong khung";
+    loop();
+  }
+
+  async function prepareDecoder() {
+    if (!scanner.detector && "BarcodeDetector" in window) {
+      try {
+        const formats = await BarcodeDetector.getSupportedFormats();
+        if (formats.length) scanner.detector = new BarcodeDetector({ formats });
+      } catch (e) {}
+    }
+    if (!scanner.detector && !scanner.zx) {
+      const Z = await loadZXing();
+      scanner.zx = { Z, reader: new Z.MultiFormatReader() };
+    }
+  }
+
+  function loop() {
+    if (!scanner.stream) return;
+    scanner.timer = setTimeout(async () => {
+      const v = $("scanVideo");
+      if (v.readyState >= 2 && v.videoWidth) {
+        const text = await decodeFrame(v);
+        if (text) { onScanned(text); return; }
+      }
+      loop();
+    }, 120);
+  }
+
+  async function decodeFrame(v) {
+    if (scanner.detector) {
+      try { const r = await scanner.detector.detect(v); return r.length ? r[0].rawValue : null; }
+      catch (e) { return null; }
+    }
+    // ZXing: cắt vùng giữa khung hình, luân phiên xoay 90° để đọc cả mã dọc
+    const { Z, reader } = scanner.zx;
+    const vw = v.videoWidth, vh = v.videoHeight;
+    const cw = Math.round(vw * 0.9), ch = Math.round(vh * 0.6);
+    const sx = Math.round((vw - cw) / 2), sy = Math.round((vh - ch) / 2);
+    const k = Math.min(1, 1000 / Math.max(cw, ch));
+    const w = Math.round(cw * k), h = Math.round(ch * k);
+    scanner.rot = !scanner.rot;
+    const c = scanner.canvas || (scanner.canvas = document.createElement("canvas"));
+    c.width = scanner.rot ? h : w; c.height = scanner.rot ? w : h;
+    const g = c.getContext("2d", { willReadFrequently: true });
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    if (scanner.rot) { g.translate(h, 0); g.rotate(Math.PI / 2); }
+    g.drawImage(v, sx, sy, cw, ch, 0, 0, w, h);
+    try {
+      return reader.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(c)))).getText();
+    } catch (e) { reader.reset(); return null; }
+  }
+
+  function onScanned(raw) {
+    if (navigator.vibrate) navigator.vibrate(60);
+    closeScanner();
+    const q = pickQuery(raw);
+    if (!q) {
+      $("q").value = raw;
+      setStatus("Mã quét được “" + raw + "” không phải ID đơn, SĐT hay ID ảnh.", true);
+      return;
+    }
+    search(q, "auto");
+  }
+
+  function setupTorch() {
+    const t = scanner.stream && scanner.stream.getVideoTracks()[0];
+    const caps = t && t.getCapabilities ? t.getCapabilities() : {};
+    scanner.torch = false;
+    $("torch").setAttribute("aria-pressed", "false");
+    $("torch").hidden = !caps.torch; // iPhone chưa hỗ trợ bật đèn từ trình duyệt
+  }
+  $("torch").addEventListener("click", async () => {
+    const t = scanner.stream && scanner.stream.getVideoTracks()[0];
+    if (!t) return;
+    scanner.torch = !scanner.torch;
+    try { await t.applyConstraints({ advanced: [{ torch: scanner.torch }] }); } catch (e) {}
+    $("torch").setAttribute("aria-pressed", String(scanner.torch));
+  });
+
+  function stopStream() {
+    clearTimeout(scanner.timer);
+    if (scanner.stream) scanner.stream.getTracks().forEach(t => t.stop());
+    scanner.stream = null;
+    $("scanVideo").srcObject = null;
+  }
+  function closeScanner() {
+    stopStream();
+    $("scanner").hidden = true;
+    document.body.classList.remove("noscroll");
+  }
+  $("scanClose").addEventListener("click", closeScanner);
+  $("scanPhoto").addEventListener("click", () => { closeScanner(); $("scanFile").click(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("scanner").hidden) closeScanner(); });
+  document.addEventListener("visibilitychange", () => { if (document.hidden && !$("scanner").hidden) closeScanner(); });
+
+  /* ---------- Lưu ảnh (iPhone: mở bảng Chia sẻ → Lưu hình ảnh) ---------- */
+  $("lbSave").addEventListener("click", async () => {
+    const it = state.images[state.idx];
+    if (!state.fullUrl || !it) return;
+    const name = (it.code || "anh-goc") + ".jpg";
+    try {
+      const blob = await (await fetch(state.fullUrl)).blob();
+      const file = new File([blob], name, { type: blob.type || "image/jpeg" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: name });
+        return;
+      }
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    } catch (e) {
+      if (e.name !== "AbortError") $("lbMsg").hidden = false, $("lbMsg").textContent = "Không lưu được ảnh: " + e.message;
+    }
+  });
+
+  /* ---------- Gợi ý cài app ---------- */
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isStandalone = navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+  let installEvt = null;
+  const dismissed = () => { try { return localStorage.getItem("fluvo_install_hide") === "1"; } catch (e) { return false; } };
+
+  function showInstall(kind) {
+    if (isStandalone || dismissed()) return;
+    $("installText").textContent = kind === "ios"
+      ? "Cài app lên iPhone: bấm nút Chia sẻ của Safari rồi chọn “Thêm vào MH chính”."
+      : "Cài app lên điện thoại để mở nhanh từ màn hình chính.";
+    $("installBtn").hidden = kind === "ios";
+    $("install").hidden = false;
+  }
+  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; showInstall("android"); });
+  $("installBtn").addEventListener("click", async () => {
+    if (!installEvt) return;
+    installEvt.prompt();
+    await installEvt.userChoice;
+    installEvt = null; $("install").hidden = true;
+  });
+  $("installHide").addEventListener("click", () => {
+    $("install").hidden = true;
+    try { localStorage.setItem("fluvo_install_hide", "1"); } catch (e) {}
+  });
+  if (isIOS) showInstall("ios");
+
+  /* ---------- Chạy offline phần giao diện ---------- */
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  }
+
+  $("year").textContent = new Date().getFullYear();
+  $("q").focus();
+</script>
+</body>
+</html>
